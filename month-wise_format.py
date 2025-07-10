@@ -1,0 +1,49 @@
+import zipfile
+import os
+import pandas as pd
+
+# === Step 1: Define paths ===
+zip_path = '/content/1.zip'
+extract_dir = '/content/extracted_files'
+
+# === Step 2: Extract the ZIP file ===
+with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    zip_ref.extractall(extract_dir)
+
+# === Step 3: Find all Excel (.xlsx) files ===
+excel_files = [os.path.join(extract_dir, f) for f in os.listdir(extract_dir) if f.endswith('.xlsx')]
+print(f"Total Excel files found: {len(excel_files)}")
+
+# === Step 4: Filter by Year 2000 and Month June–September ===
+target_year = 2024
+target_months = [6, 7, 8, 9]  # June, July, August, September
+filtered_data = []
+
+for file in excel_files:
+    try:
+        df = pd.read_excel(file)
+
+        # Check and convert 'date_start' to datetime
+        if 'date_start' in df.columns:
+            df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
+            df_filtered = df[
+                (df['date_start'].dt.year == target_year) &
+                (df['date_start'].dt.month.isin(target_months))
+            ]
+
+            if not df_filtered.empty:
+                filtered_data.append(df_filtered)
+    except Exception as e:
+        print(f"Error reading {file}: {e}")
+
+# === Step 5: Combine and save filtered results ===
+if filtered_data:
+    result_df = pd.concat(filtered_data, ignore_index=True)
+    print(f"Total filtered rows: {len(result_df)}")
+
+    # Save to XLSX
+    output_file = '/content/filtered_result_2024_June_September.xlsx'
+    result_df.to_excel(output_file, index=False)
+    print(f"Filtered data saved to: {output_file}")
+else:
+    print("No matching records found.")
